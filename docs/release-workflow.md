@@ -55,6 +55,18 @@ $Sha256   = "$ZipPath.sha256"
 
 Replace `X.Y.Z` with the actual release version (for example `0.1.0`).
 
+### Packaging Helper Script
+
+The repository also provides a helper script for the test, build, zip, and checksum steps:
+
+```powershell
+.\scripts\package-release.ps1 -Version 0.1.0
+```
+
+If `-Version` is omitted, the script uses the package version from `Cargo.toml`.
+The script creates `dist\winproc-tui-X.Y.Z-windows-x64.zip` and `dist\winproc-tui-X.Y.Z-windows-x64.zip.sha256`.
+Tag creation and GitHub Release creation remain explicit manual steps so that the maintainer can confirm the exact source commit and draft release contents before publishing.
+
 ### 1. Confirm the Target Repository
 
 Check the current remote:
