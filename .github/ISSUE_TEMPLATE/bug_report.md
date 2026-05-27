@@ -7,25 +7,26 @@ assignees: ''
 
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+## Summary
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+<!-- Briefly describe the bug. -->
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+## Steps to Reproduce
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+<!-- List the steps needed to reproduce the problem. -->
 
-**Desktop (please complete the following information):**
- - OS: [e.g. Windows 11]
- - Terminal App: [e.g. Windows Terminal 1.24]
+## Expected Behavior
 
-**Additional context**
-Add any other context about the problem here.
+<!-- Describe what you expected to happen. -->
+
+## Actual Behavior
+
+<!-- Describe what actually happened. -->
+
+## Environment
+
+<!-- Include OS, terminal app, and any other relevant environment details. -->
+
+## Additional Context
+
+<!-- Add screenshots, logs, or other context if useful. -->
