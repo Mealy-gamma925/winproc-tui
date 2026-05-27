@@ -240,6 +240,10 @@ const MOUSE_ROWS: &[HelpItem] = &[
         label: "Scroll / Move selection",
     },
     HelpItem {
+        key: "Ctrl+Wheel",
+        label: "Terminal zoom",
+    },
+    HelpItem {
         key: "Right click",
         label: "Samples auto-scroll",
     },

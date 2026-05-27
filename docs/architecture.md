@@ -258,6 +258,7 @@ Representative operations:
 - Graph clicks for sample selection and Y-axis toggle.
 - Graph right-button drag and Ctrl+left-button drag for visible range panning.
 - Wheels for table, graph, and modal scrolling.
+- Ctrl+wheel is forwarded as the Windows Terminal zoom shortcut through `SendInput`, so it changes terminal font scale instead of scrolling inside the TUI.
 
 Mouse capture is enabled only when `runtime.mouse` is true, and can be disabled through settings.
 

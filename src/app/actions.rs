@@ -11,6 +11,7 @@ use crate::{
         App, AppActivity, FocusedPanel, GraphPanDrag, GraphPanDragButton, QuitConfirmSelection,
         RecordingOverwriteSelection, TrackedRemoveSelection,
     },
+    platform::send_terminal_zoom_shortcut,
     ui::{
         GRAPH_ALL_SAMPLES_TOGGLE_WIDTH, GRAPH_Y_AXIS_TOGGLE_WIDTH, THEMES,
         column_picker_close_button_area_for_screen, column_picker_index_at,
@@ -661,6 +662,13 @@ impl App {
     }
 
     pub(crate) fn on_mouse(&mut self, mouse: MouseEvent, screen_area: Rect) {
+        if let Some(zoom_in) = terminal_zoom_direction(&mouse) {
+            if let Err(error) = send_terminal_zoom_shortcut(zoom_in) {
+                self.status = format!("Terminal zoom failed: {error}");
+            }
+            return;
+        }
+
         if self.show_display_area_warning {
             if matches!(mouse.kind, MouseEventKind::Down(MouseButton::Left))
                 && display_area_warning_ok_button_area(screen_area)
@@ -1786,6 +1794,17 @@ fn samples_scrollbar_offset_at(
     )
 }
 
+fn terminal_zoom_direction(mouse: &MouseEvent) -> Option<bool> {
+    if !mouse.modifiers.contains(KeyModifiers::CONTROL) {
+        return None;
+    }
+    match mouse.kind {
+        MouseEventKind::ScrollUp => Some(true),
+        MouseEventKind::ScrollDown => Some(false),
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1804,6 +1823,37 @@ mod tests {
     #[test]
     fn process_wheel_moves_one_row_per_notch() {
         assert_eq!(PROCESS_WHEEL_ROWS, 1);
+    }
+
+    #[test]
+    fn ctrl_wheel_maps_to_terminal_zoom_direction() {
+        assert_eq!(
+            terminal_zoom_direction(&MouseEvent {
+                kind: MouseEventKind::ScrollUp,
+                column: 0,
+                row: 0,
+                modifiers: KeyModifiers::CONTROL,
+            }),
+            Some(true)
+        );
+        assert_eq!(
+            terminal_zoom_direction(&MouseEvent {
+                kind: MouseEventKind::ScrollDown,
+                column: 0,
+                row: 0,
+                modifiers: KeyModifiers::CONTROL,
+            }),
+            Some(false)
+        );
+        assert_eq!(
+            terminal_zoom_direction(&MouseEvent {
+                kind: MouseEventKind::ScrollUp,
+                column: 0,
+                row: 0,
+                modifiers: KeyModifiers::NONE,
+            }),
+            None
+        );
     }
 
     #[test]

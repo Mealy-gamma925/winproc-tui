@@ -123,6 +123,7 @@ Some single-letter keys such as `f` map to different actions depending on which 
 | `Ctrl+R`            | Start / stop recording.                                             |
 | `Ctrl+P`            | Pause / resume screen updates.                                      |
 | `Ctrl+O`            | Open the Settings dialog.                                           |
+| `Ctrl+Wheel`        | Change the Windows Terminal zoom level.                             |
 | `F2`                | Switch theme.                                                       |
 
 
