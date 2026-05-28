@@ -27,6 +27,7 @@ pub(crate) use state::AbComparisonPoint;
 pub(crate) use state::App;
 pub(crate) use state::AppActivity;
 pub(crate) use state::DetailsMetric;
+pub(crate) use state::DetailsSampleViewState;
 #[cfg(test)]
 pub(crate) use state::DetailsTarget;
 pub(crate) use state::FocusedPanel;

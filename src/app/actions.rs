@@ -1416,15 +1416,22 @@ impl App {
         let Some((slot_index, area)) = samples_area_at(self, screen_area, x, y) else {
             return;
         };
-        self.active_graph_slot_index = slot_index;
-        let Some(index) = sample_row_index_at(
+        let rows = details_sample_page_size_for_samples_area(
             area,
-            y,
-            self.details_sample_offset,
-            self.selected_sample_count(),
-        ) else {
+            self.active_ab_comparison().is_some(),
+            self.active_graph_slot_count() <= 1,
+        );
+        let Some(view_state) = self.details_sample_view_state_for_slot(slot_index, rows) else {
             return;
         };
+        let total = self
+            .graph_slot(slot_index)
+            .map(|slot| self.graph_slot_samples(slot).len())
+            .unwrap_or(0);
+        let Some(index) = sample_row_index_at(area, y, view_state.offset, total) else {
+            return;
+        };
+        self.active_graph_slot_index = slot_index;
         self.set_details_sample_selected(index);
     }
 

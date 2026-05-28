@@ -65,7 +65,7 @@ pub(crate) fn draw_details_panel(
         })
         .max()
         .unwrap_or(1);
-    let selected_age_seconds = app.selected_details_sample_age_seconds();
+    let selected_sample_time = app.selected_details_sample_time();
     let slot_areas = details_slot_areas(area, slots.len());
     for ((slot_index, slot), slot_area) in slots.into_iter().zip(slot_areas) {
         let samples = app.graph_slot_samples(slot);
@@ -85,7 +85,7 @@ pub(crate) fn draw_details_panel(
             theme,
             app.active_graph_slot_count() == 1,
             common_y_label_width,
-            selected_age_seconds,
+            selected_sample_time,
         );
     }
 }
@@ -103,7 +103,7 @@ fn render_details_content(
     theme: Theme,
     show_base_summary: bool,
     y_label_width: usize,
-    selected_age_seconds: Option<i64>,
+    selected_sample_time: Option<DateTime<Local>>,
 ) {
     if samples.is_empty() {
         let lines = vec![Line::from(Span::styled(
@@ -126,7 +126,7 @@ fn render_details_content(
         samples,
         peak,
         metric,
-        selected_age_seconds,
+        selected_sample_time,
         app.effective_graph_time_span_seconds(),
         app.effective_graph_time_offset_seconds(),
         app.graph_show_all_samples,
@@ -144,18 +144,19 @@ fn render_details_content(
     let sample_viewport = draw_samples_subpanel(
         frame,
         samples_area,
+        app,
         samples,
         metric,
         metric_label,
         app.details_sample_selected,
         app.details_sample_offset,
+        app.active_graph_slot_index == slot_index,
         app.active_ab_comparison(),
         theme,
         app.panel_has_focus(FocusedPanel::DetailsSamples)
             && app.active_graph_slot_index == slot_index,
         slot_index,
         show_base_summary,
-        selected_age_seconds,
         app.show_sample_delta,
     );
     render_samples_scrollbar(frame, samples_area, sample_viewport, theme);
@@ -171,17 +172,18 @@ struct SampleViewport {
 fn draw_samples_subpanel(
     frame: &mut ratatui::Frame<'_>,
     area: Rect,
+    app: &App,
     samples: &[GraphSample],
     metric: DetailsMetric,
     metric_label: &str,
     selected: usize,
     offset: usize,
+    is_active_slot: bool,
     comparison: Option<&AbComparison>,
     theme: Theme,
     focused: bool,
     slot_index: usize,
     show_base_summary: bool,
-    selected_age_seconds: Option<i64>,
     show_delta: bool,
 ) -> SampleViewport {
     let block = panel_block_focused(format!("Samples#{}", slot_index + 1), theme, focused);
@@ -211,13 +213,18 @@ fn draw_samples_subpanel(
     let content_height = inner.height as usize;
     let row_capacity =
         details_samples_row_capacity(inner.height, comparison.is_some(), show_base_summary);
-    let (start, end) = sample_viewport_bounds(samples.len(), offset, row_capacity);
-    let selected_index = selected_age_seconds
-        .and_then(|age| sample_index_nearest_age_seconds(samples, age))
-        .unwrap_or(selected);
+    let view_state = app
+        .details_sample_view_state_for_slot(slot_index, row_capacity)
+        .unwrap_or(crate::app::DetailsSampleViewState {
+            selected_index: selected.min(samples.len().saturating_sub(1)),
+            selected_exact: is_active_slot,
+            offset,
+        });
+    let (start, end) = sample_viewport_bounds(samples.len(), view_state.offset, row_capacity);
     for (index, sample) in samples[start..end].iter().enumerate() {
         let sample_index = start + index;
-        let sample_selected = sample_index == selected_index;
+        let sample_selected =
+            view_state.selected_exact && sample_index == view_state.selected_index;
         let style = if sample_selected {
             Style::default()
                 .fg(theme.background)
@@ -273,7 +280,7 @@ fn draw_samples_subpanel(
 
     let summary_lines = sample_summary_lines(
         samples,
-        selected,
+        view_state.selected_index,
         metric,
         comparison,
         theme,
@@ -311,6 +318,25 @@ fn sample_viewport_bounds(total: usize, offset: usize, rows: usize) -> (usize, u
     (start, start + rows)
 }
 
+#[cfg(test)]
+fn synced_sample_viewport_offset(
+    total: usize,
+    rows: usize,
+    selected_index: usize,
+    active_selected: usize,
+    active_offset: usize,
+) -> usize {
+    if total == 0 {
+        return 0;
+    }
+    let rows = rows.max(1).min(total);
+    let max_offset = total.saturating_sub(rows);
+    let selected_index = selected_index.min(total.saturating_sub(1));
+    let active_row = active_selected.saturating_sub(active_offset).min(rows - 1);
+    selected_index.saturating_sub(active_row).min(max_offset)
+}
+
+#[cfg(test)]
 fn sample_age_seconds(samples: &[GraphSample], index: usize) -> Option<i64> {
     let latest = samples.last()?.captured_at;
     let sample = samples.get(index)?;
@@ -322,6 +348,7 @@ fn sample_age_seconds(samples: &[GraphSample], index: usize) -> Option<i64> {
     )
 }
 
+#[cfg(test)]
 fn sample_index_nearest_age_seconds(samples: &[GraphSample], age_seconds: i64) -> Option<usize> {
     samples
         .iter()
@@ -335,10 +362,47 @@ fn sample_index_nearest_age_seconds(samples: &[GraphSample], age_seconds: i64) -
         .map(|(index, _)| index)
 }
 
+#[cfg(test)]
 fn sample_index_at_age_seconds(samples: &[GraphSample], age_seconds: i64) -> Option<usize> {
     samples.iter().enumerate().find_map(|(index, _)| {
         (sample_age_seconds(samples, index) == Some(age_seconds)).then_some(index)
     })
+}
+
+fn sample_age_seconds_at_time(
+    samples: &[GraphSample],
+    captured_at: DateTime<Local>,
+) -> Option<i64> {
+    let latest = samples.last()?.captured_at;
+    Some(
+        latest
+            .signed_duration_since(captured_at)
+            .num_seconds()
+            .max(0),
+    )
+}
+
+fn sample_index_at_time(samples: &[GraphSample], captured_at: DateTime<Local>) -> Option<usize> {
+    samples
+        .iter()
+        .position(|sample| sample.captured_at == captured_at)
+}
+
+#[cfg(test)]
+fn sample_index_nearest_time(
+    samples: &[GraphSample],
+    captured_at: DateTime<Local>,
+) -> Option<usize> {
+    samples
+        .iter()
+        .enumerate()
+        .min_by_key(|(index, sample)| {
+            let diff = (sample.captured_at - captured_at)
+                .num_milliseconds()
+                .unsigned_abs();
+            (diff, usize::MAX - *index)
+        })
+        .map(|(index, _)| index)
 }
 
 fn render_samples_scrollbar(
@@ -386,7 +450,7 @@ fn draw_graph_panel(
     samples: &[GraphSample],
     peak: Option<f64>,
     metric: DetailsMetric,
-    selected_age_seconds: Option<i64>,
+    selected_sample_time: Option<DateTime<Local>>,
     span_seconds: u32,
     offset_seconds: u32,
     show_all_samples: bool,
@@ -421,6 +485,8 @@ fn draw_graph_panel(
     render_graph_all_samples_toggle(frame, layout[0], show_all_samples, theme);
     render_graph_y_axis_toggle(frame, layout[0], y_axis_zero_min, theme);
 
+    let selected_age_seconds =
+        selected_sample_time.and_then(|time| sample_age_seconds_at_time(samples, time));
     let selected_line = selected_age_seconds
         .map(|age| selected_age_line_points(age, y_min, y_max, bounds))
         .unwrap_or_default();
@@ -482,7 +548,8 @@ fn draw_graph_panel(
                 .labels(y_labels),
         );
     let selected_value_label = selected_age_seconds
-        .and_then(|age| sample_index_at_age_seconds(samples, age))
+        .and_then(|_| selected_sample_time)
+        .and_then(|time| sample_index_at_time(samples, time))
         .and_then(|index| samples.get(index))
         .map(|sample| format_metric_sample_value(sample, metric));
     let top_labels = Paragraph::new(graph_top_label_line(
@@ -606,7 +673,7 @@ fn sample_max_line(samples: &[GraphSample], metric: DetailsMetric, theme: Theme)
 
 fn sample_summary_lines(
     samples: &[GraphSample],
-    selected: usize,
+    display_selected: usize,
     metric: DetailsMetric,
     comparison: Option<&AbComparison>,
     theme: Theme,
@@ -615,7 +682,12 @@ fn sample_summary_lines(
     let mut lines = Vec::new();
     if show_base_summary {
         lines.push(sample_max_line(samples, metric, theme));
-        lines.push(sample_moving_average_line(samples, selected, metric, theme));
+        lines.push(sample_moving_average_line(
+            samples,
+            display_selected,
+            metric,
+            theme,
+        ));
     }
     lines.extend(sample_ab_summary_lines(comparison, samples, metric, theme));
     lines
@@ -1788,6 +1860,37 @@ mod tests {
         assert_eq!(sample_viewport_bounds(20, 0, 5), (0, 5));
         assert_eq!(sample_viewport_bounds(20, 3, 5), (3, 8));
         assert_eq!(sample_viewport_bounds(20, 18, 5), (15, 20));
+    }
+
+    #[test]
+    fn synced_sample_viewport_keeps_selected_time_on_same_visible_row() {
+        assert_eq!(synced_sample_viewport_offset(20, 5, 10, 7, 5), 8);
+        assert_eq!(synced_sample_viewport_offset(20, 5, 1, 7, 5), 0);
+        assert_eq!(synced_sample_viewport_offset(20, 5, 19, 7, 5), 15);
+    }
+
+    #[test]
+    fn sample_index_at_time_requires_exact_timestamp_but_nearest_can_center_viewport() {
+        let base = Local.with_ymd_and_hms(2026, 5, 10, 10, 0, 0).unwrap();
+        let samples = [
+            sample(base, Some(10), None),
+            sample(base + chrono::Duration::seconds(2), Some(20), None),
+            sample(base + chrono::Duration::seconds(4), Some(30), None),
+        ];
+        let refs = samples.to_vec();
+
+        assert_eq!(
+            sample_index_at_time(&refs, base + chrono::Duration::seconds(2)),
+            Some(1)
+        );
+        assert_eq!(
+            sample_index_at_time(&refs, base + chrono::Duration::seconds(3)),
+            None
+        );
+        assert_eq!(
+            sample_index_nearest_time(&refs, base + chrono::Duration::seconds(3)),
+            Some(2)
+        );
     }
 
     #[test]

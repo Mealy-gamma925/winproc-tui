@@ -147,6 +147,13 @@ pub(crate) struct GraphSample {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct DetailsSampleViewState {
+    pub(crate) selected_index: usize,
+    pub(crate) selected_exact: bool,
+    pub(crate) offset: usize,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum GraphPanDragButton {
     Left,
     Right,
@@ -1416,12 +1423,49 @@ impl App {
             .or_else(|| self.graph_slots.iter().find_map(Option::as_ref))
     }
 
-    pub(crate) fn selected_details_sample_age_seconds(&self) -> Option<i64> {
+    pub(crate) fn selected_details_sample_time(&self) -> Option<DateTime<Local>> {
         let slot = self.active_graph_slot()?;
+        self.graph_slot_samples(slot)
+            .get(self.details_sample_selected)
+            .map(|sample| sample.captured_at)
+    }
+
+    pub(crate) fn details_sample_view_state_for_slot(
+        &self,
+        slot_index: usize,
+        rows: usize,
+    ) -> Option<DetailsSampleViewState> {
+        let slot = self.graph_slot(slot_index)?;
         let samples = self.graph_slot_samples(slot);
-        let latest = samples.last()?.captured_at;
-        let selected = samples.get(self.details_sample_selected)?.captured_at;
-        Some(latest.signed_duration_since(selected).num_seconds().max(0))
+        if samples.is_empty() {
+            return None;
+        }
+        let selected = self.details_sample_selected.min(samples.len() - 1);
+        if slot_index == self.active_graph_slot_index {
+            return Some(DetailsSampleViewState {
+                selected_index: selected,
+                selected_exact: true,
+                offset: self.details_sample_offset,
+            });
+        }
+
+        let selected_time = self.selected_details_sample_time();
+        let selected_index = selected_time
+            .and_then(|time| sample_index_nearest_time(&samples, time))
+            .unwrap_or(selected);
+        let selected_exact =
+            selected_time.is_some_and(|time| sample_index_at_time(&samples, time).is_some());
+        Some(DetailsSampleViewState {
+            selected_index,
+            selected_exact,
+            offset: synced_sample_viewport_offset(
+                samples.len(),
+                rows,
+                selected_index,
+                self.details_sample_selected,
+                self.details_sample_offset,
+            ),
+        })
     }
 
     pub(crate) fn active_graph_visible_index(&self) -> usize {
@@ -1571,19 +1615,27 @@ impl App {
     }
 
     pub(crate) fn cycle_focus(&mut self) {
+        let selected_time = self.selected_details_sample_time();
         let next = self.next_focus_target();
         self.focused_panel = next.0;
         if let Some(slot_index) = next.1 {
             self.active_graph_slot_index = slot_index;
+            if let Some(time) = selected_time {
+                self.align_details_sample_selection_to_time(time);
+            }
         }
         self.status = self.focus_status();
     }
 
     pub(crate) fn cycle_focus_previous(&mut self) {
+        let selected_time = self.selected_details_sample_time();
         let previous = self.previous_focus_target();
         self.focused_panel = previous.0;
         if let Some(slot_index) = previous.1 {
             self.active_graph_slot_index = slot_index;
+            if let Some(time) = selected_time {
+                self.align_details_sample_selection_to_time(time);
+            }
         }
         self.status = self.focus_status();
     }
@@ -1882,6 +1934,20 @@ impl App {
             return;
         };
         self.set_details_sample_selected_manual(index);
+    }
+
+    fn align_details_sample_selection_to_time(&mut self, captured_at: DateTime<Local>) {
+        let Some(slot) = self.active_graph_slot() else {
+            return;
+        };
+        let samples = self.graph_slot_samples(slot);
+        let Some(index) = sample_index_nearest_time(&samples, captured_at) else {
+            return;
+        };
+        self.details_sample_selected = index;
+        self.clamp_details_sample_selection();
+        self.ensure_details_sample_visible();
+        self.details_live = self.details_sample_selected + 1 == self.selected_sample_count();
     }
 
     pub(crate) fn select_process_details_target(&mut self) {
@@ -4023,6 +4089,47 @@ fn graph_zoom_step(span_seconds: u32) -> u32 {
 
 fn graph_pan_step(span_seconds: u32) -> u32 {
     span_seconds.div_ceil(8).max(1)
+}
+
+fn synced_sample_viewport_offset(
+    total: usize,
+    rows: usize,
+    selected_index: usize,
+    active_selected: usize,
+    active_offset: usize,
+) -> usize {
+    if total == 0 {
+        return 0;
+    }
+    let rows = rows.max(1).min(total);
+    let max_offset = total.saturating_sub(rows);
+    let selected_index = selected_index.min(total.saturating_sub(1));
+    let active_row = active_selected.saturating_sub(active_offset).min(rows - 1);
+    selected_index.saturating_sub(active_row).min(max_offset)
+}
+
+fn sample_index_at_time(samples: &[GraphSample], captured_at: DateTime<Local>) -> Option<usize> {
+    samples
+        .iter()
+        .position(|sample| sample.captured_at == captured_at)
+}
+
+fn sample_index_nearest_time(
+    samples: &[GraphSample],
+    captured_at: DateTime<Local>,
+) -> Option<usize> {
+    samples
+        .iter()
+        .enumerate()
+        .min_by_key(|(index, sample)| {
+            let diff = sample
+                .captured_at
+                .signed_duration_since(captured_at)
+                .num_milliseconds()
+                .unsigned_abs();
+            (diff, usize::MAX - *index)
+        })
+        .map(|(index, _)| index)
 }
 
 fn rounded_nonnegative_seconds_between(later: DateTime<Local>, earlier: DateTime<Local>) -> u32 {
